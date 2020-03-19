@@ -1,0 +1,249 @@
+<!doctype html>
+{% load static %}
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="180">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" href="{% static 'wasco/images/asan.ico' %}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'wasco/css/style.css' %}">
+    <title>Smart bin</title>
+
+    <style>
+        header {
+            height: 95px;
+            background-color: rgb(7, 114, 255);
+overflow: hidden;
+padding: 20px 10px;
+}
+.footerel{
+margin-right: 20px;
+font: 12px/1.5 'Fira Sans',sans-serif;
+color: #748292;
+}
+        
+body {
+margin: 0;
+font-family: Arial, Helvetica, sans-serif;
+}
+li{
+  margin-right: 10px;
+  list-style-type: none;
+  float: right;
+}       
+     
+        a,
+        a:hover,
+        a:active,
+        a:focus {
+            text-decoration: none;
+        }
+    .orange{
+        background-color: orange;
+        color: orange;
+    }
+    .yellow{
+        background-color: yellow;
+        color: yellow;
+        /* yellow class has to be added */
+    }
+</style>
+</head>
+
+<body>
+        <header id="header">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-xs-12 nav">
+                            <a href="{% url 'index' %}">
+                                <img class="logo " src="{% static '../static/wasco/images/logo.svg' %}" alt="Asan Xidmət">
+                            </a>
+                        </div>
+        
+                    </div>
+                </div>
+            </header>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                <div style="overflow-x:auto;">
+                    <table>
+                        <tr>
+                            <th>No</th>
+                            <th>Cihaz</th>
+                            <th>Batareya</th>
+                            <th>Doluluq (%)</th>
+                        </tr>
+                           <!-- {{object_list}} -->
+                            {% for obj in object_list %}
+                            <tr>
+                                <td>{{ obj.text.0 }}</td>
+                                <td>{{ obj.text.1 }}</td>
+                                <td>{{ obj.text.2 }} %</td>
+                                <td>{{ obj.text.3 }} %
+                                    <div class="progress" style="height: 7px;">
+                                        <div class="progress-bar {{ obj.battery }}" role="progressbar" style="width: {{ obj.text.3 }}%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                        
+                            <!-- {% for obj in object_list %}
+                            <tr>
+                                {% for item in obj.text %}
+                                    <td>{{ item }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %} -->
+                    </table>
+                    <button id="button">Marşrutu təyin et</button>
+                </div>
+            </div>
+
+            <div class="col-lg-8 col-md-8 col-sm-8 col-xs-12">
+                <div id="map"></div>
+            </div>
+        </div>
+<!--  -->
+    </div>
+    <footer class="footer">
+        <div class="row">
+            <div class="container">
+                <div class="col-lg-12">
+                        <p> 
+                                <a class="footerel" href="https://asan.gov.az/az/category/asan-xidmetler">ASAN xidmətlər</a>
+                                <a class="footerel" href="https://asan.gov.az/az/category/asan-kommunal">ASAN Kommunal</a>
+                                <a class="footerel" target="_blank" href="https://www.asanpay.az/" rel="external">ASAN ödəniş</a>
+                                <a class="footerel" href="https://asan.gov.az/az/online-queue">Onlayn növbə</a>
+                                <a class="footerel" href="https://asan.gov.az/az/mobile-service">Səyyar ASAN xidmət</a>
+                                <a class="footerel" target="_blank" href="http://www.asanschool.az/" rel="external">ASAN könüllülük
+                                    məktəbi</a>
+                            </p> 
+                    
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function initMap() {
+            //Map options
+            var elButton = document.getElementById("button");
+            var options = {
+                zoom: 19,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                center: { lat: 40.61394, lng: 48.66491 }
+            }
+
+            var polylineOptions={};
+            polylineOptions.strokeColor="#007bff";
+            polylineOptions.strokeOpacity=.4;
+            polylineOptions.strokeWeight=12;
+
+            //New map
+            var map = new google.maps.Map(document.getElementById('map'), options);
+            directionsService = new google.maps.DirectionsService;
+            var directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                polylineOptions:polylineOptions,
+                markerOptions:{visible :false}
+            });
+
+            var wayPoints = [];
+
+            {% for obj in object_list %}
+            addMarker({{ obj.coords | safe }}, '{{ obj.text.1 }}', '{{ obj.device_icon }}');
+            if ('{{ obj.device_icon }}' == "/static/wasco/images/red.png") {
+                var a = {{ obj.coords | safe }};
+                wayPoints.push({
+                    location: new google.maps.LatLng(
+                        a
+                    ),
+                    stopover: true
+                })
+            }
+            {% endfor %}
+            
+        // // Add Marker function
+        function addMarker(coords, text, device_icon) {
+            var marker = new google.maps.Marker({
+                position: coords,
+                map: map,
+                icon: device_icon
+            });
+
+            var infoWindow = new google.maps.InfoWindow({
+                content: text
+            });
+
+            marker.addListener('click', function () {
+                infoWindow.open(map, marker);
+            });
+        }
+
+        elButton.addEventListener("click",function () {
+        var startLocation = getStartPositions();
+        var icon = {
+            url: "{% static '../static/wasco/images/flag.png' %}",
+            scaledSize: new google.maps.Size(25, 25), // scaled size
+        };
+        var startmarker = new google.maps.Marker({
+            position: startLocation,
+            map: map,
+            icon: icon
+        });
+        displayRoute(startLocation,startLocation,directionsService,directionsRenderer,wayPoints);
+    })
+
+        function displayRoute(origin, destination, service, display, waypoints) {
+            service.route({
+                origin: origin,
+                destination: destination,
+                waypoints: waypoints,
+                optimizeWaypoints:true,
+                travelMode: 'DRIVING',
+            }, function(response, status) {
+                if (status === 'OK') {
+                    display.setDirections(response);
+                } else {
+                    alert('Could not display directions due to: ' + status);
+                }
+            });
+        }
+
+        }
+
+        function getStartPositions(){
+    // $.get("api/start_coordinate/",{},function (data) {
+    //     var data= data[0];
+    //     startLocation ={
+    //         lng: data.longitude,
+    //         lat: data.latitude
+    //     }
+    // }); 	40.61348	48.66465
+    return startLocation = {
+        lng: 48.66491,
+        lat: 40.61300
+    };
+}
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCHBogTzzKWBngIxwUwHV_VbQX9rHuL0ZE&callback=initMap">
+        </script>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
